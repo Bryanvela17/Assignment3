@@ -1,8 +1,7 @@
 from nltk.tokenize import RegexpTokenizer
+from nltk.stem import PorterStemmer
 import json
 from bs4 import BeautifulSoup
-
-#regTokenizer = RegexpTokenizer(r'\w+')
 
 class Posting:
     def __init__(self, id, frequency):
@@ -33,17 +32,33 @@ def parseFile(filePath: str):
         page_obj = BeautifulSoup(json_obj['content'], 'lxml')
 
         # Tokenizing the text and storing in dictionary. Key (token) value (frequency)
-        #print(page_obj.get_text())
+        print(pageTokenize(page_obj))
 
-def pageTokenize()
+def pageTokenize(page: object):
     '''
     Tokenizes the content retrieved from BeautifulSoup's get_text().
     Returns a dictionary of the tokens as keys and frequency as values. 
     This tokenizer also takes the *stems* from every token and stores it as
     keys. 
     '''
-    pass
 
+    # Tokenizing the page and storing tokens in a list
+    regTokenizer = RegexpTokenizer(r'\w+')
+    tokens = regTokenizer.tokenize(page.get_text())
+
+    # Stemming each token and adding to a dictionary
+    stemmer = PorterStemmer()
+    stems = dict()
+    for token in tokens:
+        stemmedWord = stemmer.stem(token)
+
+        # Checking if it's already in the dictioanry - if it is, add by 1. If not, add a new entry
+        if stemmedWord in stems:
+            stems[stemmedWord] += 1
+        else:
+            stems[stemmedWord] = 1
+
+    return stems
 
 
 def run():
