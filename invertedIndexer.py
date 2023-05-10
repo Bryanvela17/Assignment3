@@ -22,11 +22,11 @@ ALPHANUMERIC_WORDS = re.compile('[a-zA-Z0-9]+')
 
 
 ##################################################################################################################################################
-#andy's additions
+#andy's additions 
 stemmer = PorterStemmer()
 words_in_urls = defaultdict(list)   # Maps each token/word with a Posting object that contains the urlID and the frequency 
 
-
+#testing 
 
 #for postings
 class Postings:
