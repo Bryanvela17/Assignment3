@@ -2,6 +2,7 @@ from nltk.tokenize import RegexpTokenizer
 from nltk.stem import PorterStemmer
 import json
 from bs4 import BeautifulSoup
+import os
 
 class Posting:
     def __init__(self, id, frequency):
@@ -34,7 +35,7 @@ def parseFile(filePath: str):
         # Tokenizing the text and storing in dictionary. Key (token) value (frequency)
         print(pageTokenize(page_obj))
 
-def pageTokenize(page: object):
+def pageTokenize(page: object, stems: dict):
     '''
     Tokenizes the content retrieved from BeautifulSoup's get_text().
     Returns a dictionary of the tokens as keys and frequency as values. 
@@ -48,7 +49,6 @@ def pageTokenize(page: object):
 
     # Stemming each token and adding to a dictionary
     stemmer = PorterStemmer()
-    stems = dict()
     for token in tokens:
         stemmedWord = stemmer.stem(token)
 
@@ -62,7 +62,30 @@ def pageTokenize(page: object):
 
 
 def run():
-    parseFile("../developer/DEV/aiclub_ics_uci_edu/8ef6d99d9f9264fc84514cdd2e680d35843785310331e1db4bbd06dd2b8eda9b.json")
+    # Data structure (dictionary) to hold the inverted index in memory
+    index = dict()
+
+    # Dictionary to hold the mapping between page ID and url
+    pageIDs = dict()
+
+    pageCounter = 0
+
+    # Iterating through all the inner folders in DEV folder
+    path_to_inner = '../developer/DEV/'
+    for folder in os.listdir(path_to_inner):
+        
+        # Iterating through all the JSON files in the inner folder
+        json_files = []
+
+        for filename in os.listdir(os.path.join(path_to_inner, folder)):
+            json_files.append(filename)
+
+        for json_file in json_files:
+            # Processing each json file
+            pass
+
+
+    #parseFile("../developer/DEV/aiclub_ics_uci_edu/8ef6d99d9f9264fc84514cdd2e680d35843785310331e1db4bbd06dd2b8eda9b.json")
 
 if __name__ == '__main__':
     run()
