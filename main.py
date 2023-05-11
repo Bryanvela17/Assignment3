@@ -33,9 +33,9 @@ def parseFile(filePath: str):
         page_obj = BeautifulSoup(json_obj['content'], 'lxml')
 
         # Tokenizing the text and storing in dictionary. Key (token) value (frequency)
-        print(pageTokenize(page_obj))
+        return (pageTokenize(page_obj), url)
 
-def pageTokenize(page: object, stems: dict):
+def pageTokenize(page: object):
     '''
     Tokenizes the content retrieved from BeautifulSoup's get_text().
     Returns a dictionary of the tokens as keys and frequency as values. 
@@ -49,6 +49,7 @@ def pageTokenize(page: object, stems: dict):
 
     # Stemming each token and adding to a dictionary
     stemmer = PorterStemmer()
+    stems = dict()
     for token in tokens:
         stemmedWord = stemmer.stem(token)
 
@@ -78,11 +79,45 @@ def run():
         json_files = []
 
         for filename in os.listdir(os.path.join(path_to_inner, folder)):
-            json_files.append(filename)
+            json_files.append(os.path.join(path_to_inner, folder, filename))
 
         for json_file in json_files:
+
             # Processing each json file
-            pass
+            words, url = parseFile(json_file)
+
+            for word, counter in words.items():
+
+                # Creating a posting
+                post = Posting(pageCounter, counter)
+
+                # Assigning to dictionary
+                if word in index:
+                    index[word].append(post)
+                else:
+                    index[word] = []
+                    index[word].append(post)
+
+            # After processing, store a mapping between the actual file and the id
+            pageIDs[pageCounter] = url
+            pageCounter += 1
+
+    # Once finished, put output to file
+    with open('results.txt', 'w', encoding='utf-8') as f:
+        f.write(f"Number of indexed documents: {len(pageIDs)}\n")
+        f.write(f"Number of tokens: {len(index)}\n")
+        f.write(f"Inverted Index\n")
+
+        for key, value in index.items():
+            f.write("\n------------------------------------------------\n")
+            f.write(f"Token: {key} - Documents: ")
+            for post in value:
+                f.write(f"{post.id}:{post.frequency} ")
+
+        f.write(f"ID Mappings")
+        for key, value in pageIDs.items():
+            f.write(f"{key} {value}\n")
+
 
 
     #parseFile("../developer/DEV/aiclub_ics_uci_edu/8ef6d99d9f9264fc84514cdd2e680d35843785310331e1db4bbd06dd2b8eda9b.json")
