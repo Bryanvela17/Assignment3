@@ -123,7 +123,6 @@ def run():
         for key, value in pageIDs.items():
             f.write(f"{key} {value}\n")
 
-    #parseFile("../developer/DEV/aiclub_ics_uci_edu/8ef6d99d9f9264fc84514cdd2e680d35843785310331e1db4bbd06dd2b8eda9b.json")
-
+            
 if __name__ == '__main__':
     run()
