@@ -24,10 +24,37 @@ class SearchEngine:
         '''
         returnable = dict()
         with open(indexOfIndex, 'r') as f:
+            for line in f:
+                entry = line.splitlines()
+                returnable[entry[0]] = entry[1]
+
+        return returnable
 
 
+    def getUrls(self, query: str):
+        '''
+        Main functionality of the engine. Takes a query as a parameter and returns
+        a list of all URLs that are relevant to that query. 
+        '''
 
-    def getUrls(self, query: str)
+        # Parsing search query, getting the terms as stems
+        # Tokens contains a dictionary of the token itself as the key and the position as the value
+        tokens = self.parseSearch(query)
+
+        # Getting all token positions in the inverted index from the index of inverted index
+        indexPositions = self.getIndexPositions(tokens)
+
+    def getIndexPositions(self, tokens: list):
+        '''
+        Takes a list of tokens as input. Returns a dictionary with the token as key
+        and the seek() position as the value. 
+        '''
+        positions = dict()
+        for token in tokens:
+            positions[token] = self._indexOfIndex[token]
+
+        return positions
+
 
 
     def parseSearch(self, query: str):
