@@ -101,25 +101,22 @@ def find_dev_folder():
     return None
 
 
-def findIntersection(intersectionDict):
-    tokenAmt = len(intersectionDict)
+def findIntersections(listOfIntersections):
     intList = set() #hold all the potential urls that have the word
     #do two lists at once to shrinken the amount of links then compare it to the rest of the lists 
 
-    firstList = list()
-    secondList = list()
-    lengthList = list() #holds the length of all the lists in the dictionary
+    firstList = listOfIntersections[0]
+    secondList = listOfIntersections[1]
 
-    firstList, secondList = list(intersectionDict.values())[:2] #gets the first and second lists
-    
+
     first = 0
     second = 0
     #keep going til the pointer for each list reaches the end, 
     #if one pointer reaches the end first that means there are no more valid urls 
-    while first < lengthList[0] and second < lengthList[1]:
+    while first < len(firstList) and second < len(secondList):
         if firstList[first].id  == secondList[second].id:   #check if the urls match
             if firstList[first].id not in intList:#makes sure the url's not already in there
-                intList.append(firstList[first].id)
+                intList.add(firstList[first].id)
                 first +=1 
                 second+=1
         elif first < second: #second is ahead which means that first should catch up to second using skip ptrs 
@@ -134,6 +131,9 @@ def findIntersection(intersectionDict):
             else:
                 second +=1
 
+    iList = list(intList)
+    # for i in iList:
+    #     print(str(i))
     return list(intList) #converts set into a list 
     
 
@@ -207,16 +207,20 @@ def run():
     #     print(token + ": " + ", ".join(doc_ids))
 
     searchTerms=["artifici","intellig"]
-    intersection = dict() #holds only the lists that correspond to the query
+    listOfIntersections = list() #holds only the lists that correspond to the query
     #basic intersection
     for token, postings_list in index.items():
         intList = list()
         if token in searchTerms:
-            intList.append(postings_list) #gets the posting lists for the respectable tokens
-            intersection[token] = intList #appends the list to dictionary of intersections
+            for posts in postings_list:
+                intList.append(posts) #gets the posting lists for the respectable tokens
+            # for i in intList:
+            #     print(str(i.id) + " : " + str(i.skipPtr))
+
+            listOfIntersections.append(intList) #appends the list to dictionary of intersections
 
     #go parallel to find intersections
-    correctUrls = findIntersections(intersection)
+    correctUrls = findIntersections(listOfIntersections)
 
 # Once finished, put output to file
     with open('results.txt', 'w', encoding='utf-8') as f:
