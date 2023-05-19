@@ -14,7 +14,7 @@ class SearchEngine:
     def retrieveDocuments(self, query):
         parsedQuery = self.parseSearch(query)
         documentSets = self.merge(parsedQuery)
-        return self.getUrls(documentSets)
+        return self.getTopUrls(documentSets)
 
     def merge(self, parsedQuery):
         with open(self._invertedIndexFile, 'r') as inverted_file:
@@ -38,8 +38,8 @@ class SearchEngine:
         else:
             return []
 
-    def getUrls(self, documentSets):
-        urls = set()  # Use a set to store unique URLs
+    def getTopUrls(self, documentSets):
+        url_scores = {}
         with open(self._mappingFile, 'r') as mapping_file:
             mapping_contents = mapping_file.readlines()
 
@@ -47,22 +47,32 @@ class SearchEngine:
         for line in mapping_contents:
             doc_id, url = line.strip().split()
             if doc_id in intersected_docs:
-                urls.add(url)
+                url_scores[url] = url_scores.get(url, 0) + 1
 
-        return urls
+        # Sort URLs based on score (frequency of occurrence)
+        sorted_urls = sorted(url_scores, key=url_scores.get, reverse=True)
+
+        # Return top 5 URLs
+        return sorted_urls[:5]
 
 
 if __name__ == '__main__':
-    invertedIndexFile = '/Users/brandonvela/ICS121_InfoRetrieval/Milestone1/results_3.txt'
-    mappingFile = '/Users/brandonvela/ICS121_InfoRetrieval/Milestone1/mappings.txt'
+    invertedIndexFile = '/home/bovela/121M1/Assignment3/results_3.txt'
+    mappingFile = '/home/bovela/121M1/Assignment3/mappings.txt'
     engine = SearchEngine(PorterStemmer(), re.compile('[a-zA-Z0-9]+'), invertedIndexFile, mappingFile)
 
-    query = input("Please enter your query: ")
-    documents = engine.retrieveDocuments(query)
+    print("Enter a query or press Ctrl+C to exit.")
+    try:
+        while True:
+            query = input("Please enter your query: ")
+            top_urls = engine.retrieveDocuments(query)
 
-    if len(documents) > 0:
-        print("Relevant documents:")
-        for doc in documents:
-            print(doc)
-    else:
-        print("No relevant documents found.")
+            if len(top_urls) > 0:
+                print("Top 5 relevant documents:")
+                for url in top_urls:
+                    print(url)
+            else:
+                print("No relevant documents found.")
+    except KeyboardInterrupt:
+        print("Exiting...")
+
