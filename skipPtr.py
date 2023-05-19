@@ -101,37 +101,33 @@ def find_dev_folder():
     return None
 
 
-def findIntersections(listOfIntersections):
-    intList = set() #hold all the potential urls that have the word
+def findIntersections(setOfValidUrls,firstList, secondList):
     #do two lists at once to shrinken the amount of links then compare it to the rest of the lists 
-
-    firstList = listOfIntersections[0]
-    secondList = listOfIntersections[1]
-
-
+    intList = list()
     first = 0
     second = 0
     #keep going til the pointer for each list reaches the end, 
     #if one pointer reaches the end first that means there are no more valid urls 
     while first < len(firstList) and second < len(secondList):
         if firstList[first].id  == secondList[second].id:   #check if the urls match
-            if firstList[first].id not in intList:#makes sure the url's not already in there
-                intList.add(firstList[first].id)
+            if firstList[first].id not in setOfValidUrls:#makes sure the url's not already in there
+                intList.append(firstList[first])
                 first +=1 
                 second+=1
         elif first < second: #second is ahead which means that first should catch up to second using skip ptrs 
-            if first.skipPtr() <= second.skipPtr():
+            if first.skipPtr <= second.skipPtr:
                 first+=3 #skip to where the skipPtr is at which is 3 away
         elif first > second: #first is ahead which means that second should catch up to first using skip ptrs 
-            if second.skipPtr() <= first.skipPtr():
+            if second.skipPtr <= first.skipPtr:
                 second+=3 #skip to where the skipPtr is at which is 3 away
         else:   #if you cant use skip ptrs then just increment the ptr that needs to catch up to the other one
-            if first.id() < second.id():
+            if firstList[first].id < secondList[second].id:
                 first+=1
             else:
                 second +=1
-
-    iList = list(intList)
+    #navig home 0,2,3
+    #navig home about 0,2,3
+    # iList = list(intList)
     # for i in iList:
     #     print(str(i))
     return list(intList) #converts set into a list 
@@ -206,7 +202,7 @@ def run():
     #     doc_ids = [str(posting.id) + ":" + str(posting.skipPtr) for posting in postings_list]
     #     print(token + ": " + ", ".join(doc_ids))
 
-    searchTerms=["artifici","intellig"]
+    searchTerms=["navig","home","about"]
     listOfIntersections = list() #holds only the lists that correspond to the query
     #basic intersection
     for token, postings_list in index.items():
@@ -219,9 +215,19 @@ def run():
 
             listOfIntersections.append(intList) #appends the list to dictionary of intersections
 
-    #go parallel to find intersections
-    correctUrls = findIntersections(listOfIntersections)
+    setOfValidUrls = set()
+    searchTermsPtr = 1
+    correctUrls = list() #will have the cumulative list of postings that are valid
+    while searchTermsPtr < len(searchTerms): #keep finding intersections until the last token is merged into the main
+        if len(correctUrls) == 0: #nothing in the total url list so intersect the first and second lists
+            correctUrls = findIntersections(setOfValidUrls,listOfIntersections[0], listOfIntersections[searchTermsPtr])
+        else:
+            correctUrls = findIntersections(setOfValidUrls, correctUrls,listOfIntersections[searchTermsPtr])
+        searchTermsPtr+=1
 
+    #go parallel to find intersections
+    for i in correctUrls:
+        print(str(i.id))
 # Once finished, put output to file
     with open('results.txt', 'w', encoding='utf-8') as f:
         f.write(f"Number of indexed documents: {len(pageIDs)}\n")
