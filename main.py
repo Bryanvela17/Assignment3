@@ -2,6 +2,7 @@ from nltk.tokenize import RegexpTokenizer
 from nltk.stem import PorterStemmer
 import json
 from bs4 import BeautifulSoup
+from urllib.parse import urldefrag
 import os
 import re
 
@@ -31,6 +32,9 @@ def parseFile(filePath: str):
         json_obj = json.load(file)
 
         url = json_obj['url']
+
+        # Defragging the URL
+        url, fragment = urldefrag(url)
 
         # Using beautifulsoup to parse HTML content
         page_obj = BeautifulSoup(json_obj['content'], 'lxml')
@@ -109,17 +113,15 @@ def run():
 
     # Once finished, put output to file
     with open('results.txt', 'w', encoding='utf-8') as f:
-        f.write(f"Number of indexed documents: {len(pageIDs)}\n")
-        f.write(f"Number of tokens: {len(index)}\n")
-        f.write(f"Inverted Index\n")
+        new_index = sorted(index.items())
 
-        for key, value in index.items():
-            f.write("\n------------------------------------------------\n")
-            f.write(f"Token: {key} - Documents: ")
+        for key, value in new_index:
+            f.write(f"{key},{len(value)}")
             for post in value:
-                f.write(f"{post.id}:{post.frequency} ")
+                f.write(f",{post.id}:{post.frequency}")
+            f.write("\n")
 
-        f.write(f"ID Mappings")
+    with open('mappings.txt', 'w', encoding='utf-8') as f:
         for key, value in pageIDs.items():
             f.write(f"{key} {value}\n")
 
