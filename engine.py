@@ -75,90 +75,152 @@ class SearchEngine:
         return returnable
 
 
-    def merge(self, parsedQuery, invertedIndexFile, mapping):
-        with open(invertedIndexFile, 'r') as inverted_file, open(mapping, 'r') as mapping_file:
-            inverted_contents = inverted_file.read()
-            mapping_contents = mapping_file.read()
-
-        queryDict = {}
-        PostIDs_In_Common = []
-        for word in parsedQuery:
-            lines = inverted_contents.split('\n')
-            for line in lines:
-                line = line.strip()
-                if line.startswith(word + ',') or line == word or line.endswith(',' + word):
-                    queryDict[word] = line
-        PostIDs_In_Common = find_common_documents(queryDict)
-        return PostIDs_In_Common
 
 
-def find_common_documents(queryDict):
-    common_documents = set()
-
-    # Get the lines from queryDict values
-    lines = [value.split(',') for value in queryDict.values()]
-
-    smallest_occurrences = []
-    smallest_count = float('inf')
-
-    # Find the smallest number of occurrences for the token
-    for line in lines:
-        count = int(line[1])
-        if count < smallest_count:
-            smallest_count = count
-            smallest_occurrences = line[2:]
-
-    # Iterate over the smallest number of occurrences
-    for occurrence in smallest_occurrences:
-        url_id, frequency = occurrence.split(':')
-        x = url_id
-        x_found = True
-        # Check if x exists in all other lines
-        for line in lines:
-            if line[2:] != smallest_occurrences and not any(x in entry.split(':')[0] for entry in line[2:]):
-                x_found = False
-                break
-        if x_found:
-            common_documents.add(x)
-
-    return common_documents
+    def merge(self, parsedQuery, invertedIndexFile, indexOfTheIndex, mapping):
+        list = []
+        with open(invertedIndexFile, "r") as file:
+            for word in parsedQuery:
+                position = indexOfTheIndex[word]
+                file.seek(position)
+                line = file.readline().strip()
+                list.append(line)
 
 
+        result = intersect(list)
+        first_values = []
+        for item in result:
+            value = item.split(':')[0]
+            first_values.append(value)
+        displayValues(first_values, mapping)
+        # return first_values
 
-def get_urls_from_mapping(mapping_file, url_ids, limit=5):
-    url_mapping = {}
-    for line in mapping_file:
-        url_id, url = line.strip().split(' ')
-        url_mapping[url_id] = url
 
-    urls = [url_mapping[url_id] for url_id in url_ids if url_id in url_mapping]
-    return urls[:limit]
+def displayValues(postIDS, mapping):
+    count = 0  # Counter variable to track the number of values printed
+    for item in postIDS:
+        y = int(item)
+        print(mapping[y])
+        count += 1
+        if count == 5:
+            break
+    print(len(postIDS))
+
+def hasSkip(vector, index):
+    try:
+        hasSkip = int(vector[index].split(":")[2])
+        return True
+    except Exception:
+        return False
+
+def skip(vector, index) -> int:
+    hasSkip = int(vector[index].split(":")[2])
+    return hasSkip
+
+def skipIndex(vector, index) -> int:
+    findIndexOfSkip = int(vector[index].split(":")[3])
+    return findIndexOfSkip
+
+def intersect(lists):
+    if len(lists) < 2:
+        elements = lists[0].split(',')[2:]
+        return [element.split(':')[0] for element in elements]
+
+    # Sort the lists based on the first index in ascending order
+    sorted_lists = sorted(lists, key=lambda x: int(x.split(",")[1]))
+
+    answer_length = int(sorted_lists[0].split(",")[1].strip())
+    # Initialize the intersection with the first sorted list
+    answer = sorted_lists[0].split(",")[2:]  # Split the first sorted list and exclude the first two elements
+
+    for i in range(1, len(sorted_lists)):
+
+        current_list_length = int(sorted_lists[i].split(",")[1].strip())
+        current_list = sorted_lists[i].split(",")[2:]  # Split the current sorted list and exclude the first two elements
+
+        intersection = []  # Temporary list to store the intersection of the current list with the answer list
+
+        p1 = 0  # Index for answer list
+        p2 = 0  # Index for current list
+
+        while p1 < answer_length and p2 < current_list_length:
+            doc_id_1 = int(answer[p1].split(":")[0])  # Extract docID from answer list
+            doc_id_2 = int(current_list[p2].split(":")[0])  # Extract docID from current list
+
+            if doc_id_1 == doc_id_2:
+                intersection.append(doc_id_1)
+                p1 += 1
+                p2 += 1
+            elif doc_id_1 < doc_id_2:
+                if hasSkip(answer, p1) and (skip(answer, p1) <= doc_id_2):
+                    while hasSkip(answer, p1) and (skip(answer, p1) <= doc_id_2):
+                        p1 = skipIndex(answer, p1)
+                else:
+                    p1 += 1
+            else:
+                if hasSkip(current_list, p2) and (skip(current_list, p2) <= doc_id_1):
+                    while hasSkip(current_list, p2) and (skip(current_list, p2) <= doc_id_1):
+                        p2 = skipIndex(current_list, p2)
+                else:
+                    p2 += 1
+
+        answer = ['placeholder', str(len(intersection))] + [f"{element}:0" for element in intersection]  # Update the answer list with the intersection  # Update the answer list with the intersection
+        answer_length = int(answer[1])
+        answer = answer[2:]
+    return answer
+
+
+def read_mappings(filename):
+    mappings = {}
+    with open(filename, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                key, value = line.split(' ', 1)
+                mappings[int(key)] = value
+    return mappings
+
+def read_indexOfIndex(filename):
+    mappings = {}
+    with open(filename, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                key, value = line.split(' ', 1)
+                mappings[key] = int(value)
+    return mappings
+
 
 if __name__ == '__main__':
-    invertedIndexFile = '/Users/bryanvela/Documents/CS121_Spring 2023_Information Retrieval/A3Milestone2/results.txt'
-    mapping = '/Users/bryanvela/Documents/CS121_Spring 2023_Information Retrieval/A3Milestone2/mappings.txt'
+    invertedIndexFile = 'skiplist.txt'      # Inverted index with skip jumps made in SkipPointer.py
+    mapping = 'mappings.txt'                # Mapping of DocIDs and URLs
+    indexOfIndex = 'indexOfIndex.txt'       # index of Index make in indexOfIndexMaker.py
+    mappings_dict = read_mappings(mapping)  # Mapping dict now im memory
+    indexOfIndex_dict = read_indexOfIndex(indexOfIndex) # Inverted Index now in memory
+
+
     # CAUTION - This line of code takes a while! Make sure to only perform this initialization ONCE
     engine = SearchEngine(PorterStemmer(), re.compile('[a-zA-Z0-9]+'), invertedIndexFile )
 
-    query = input("Please enter your query: ")
-    print("You asked for: ", query)
-    start_time = time.perf_counter()
-    parsedQuery = engine.parseSearch(query)
+    while True:
+        query = input("Please enter your query: ")  # Asks the user for their query
+        start_time = time.perf_counter()            # Timer begins counting the time
+        parsedQuery = engine.parseSearch(query)     # Query is tokenized and parsed
 
-    mergedPosting = engine.merge(parsedQuery, invertedIndexFile, mapping)
-    with open(mapping, 'r') as mapping_file:
-        urls = get_urls_from_mapping(mapping_file, mergedPosting, limit=5)
-        print("Matching URLs (Top 5):")
-        for url in urls:
-            print(url)
-    end_time = time.perf_counter()
-    execution_time = end_time - start_time
 
-    # Convert the execution time to minutes, seconds, and milliseconds
-    minutes = int(execution_time // 60)
-    seconds = int(execution_time % 60)
-    milliseconds = int((execution_time - int(execution_time)) * 1000)
+        # Merge finds the intersection of the query using skip pointers and Index_of_Index,
+        # the Inverted_Index, and the Mapping (Main works is done here)
+        engine.merge(parsedQuery, invertedIndexFile, indexOfIndex_dict, mappings_dict)
 
-    # Display the execution time
-    print(f"Execution time: {minutes} minutes {seconds} seconds {milliseconds} milliseconds")
-    print(len(mergedPosting))
+
+        end_time = time.perf_counter()              # End the timer
+        execution_time = end_time - start_time
+
+        # Convert the execution time to minutes, seconds, and milliseconds
+        minutes = int(execution_time // 60)
+        seconds = int(execution_time % 60)
+        milliseconds = int((execution_time - int(execution_time)) * 1000)
+
+        # Display the execution time
+        print(f"Execution time: {minutes} minutes {seconds} seconds {milliseconds} milliseconds")
+
