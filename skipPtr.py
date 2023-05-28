@@ -94,10 +94,10 @@ def assignSkips(index):
 def find_dev_folder():
     # Function to find the "DEV" folder in the computer
     for root, dirs, files in os.walk('/', topdown=True):
-        # if 'DEV' in dirs:
-        #     return os.path.join(root, 'DEV')
-        if 'testerFile' in dirs:
-            return os.path.join(root, 'testerFile')
+        if 'DEV' in dirs:
+            return os.path.join(root, 'DEV')
+        # if 'testerFile' in dirs:
+        #     return os.path.join(root, 'testerFile')
     return None
 
 
@@ -115,11 +115,13 @@ def findIntersections(setOfValidUrls,firstList, secondList):
                 first +=1 
                 second+=1
         elif first < second: #second is ahead which means that first should catch up to second using skip ptrs 
-            if first.skipPtr <= second.skipPtr:
-                first+=3 #skip to where the skipPtr is at which is 3 away
+            if firstList[first].skipPtr != -1 and secondList[second].skipPtr != -1:       
+                if firstList[first].skipPtr <= secondList[second].skipPtr:
+                    first+=3 #skip to where the skipPtr is at which is 3 away
         elif first > second: #first is ahead which means that second should catch up to first using skip ptrs 
-            if second.skipPtr <= first.skipPtr:
-                second+=3 #skip to where the skipPtr is at which is 3 away
+            if firstList[first].skipPtr != -1 and secondList[second].skipPtr != -1:       
+                if secondList[second].skipPtr <= firstList[first].skipPtr:
+                    second+=3 #skip to where the skipPtr is at which is 3 away
         else:   #if you cant use skip ptrs then just increment the ptr that needs to catch up to the other one
             if firstList[first].id < secondList[second].id:
                 first+=1
@@ -227,7 +229,7 @@ def run():
 
     #go parallel to find intersections
     for i in correctUrls:
-        print(str(i.id))
+        print(str(i.id)
 # Once finished, put output to file
     with open('results.txt', 'w', encoding='utf-8') as f:
         f.write(f"Number of indexed documents: {len(pageIDs)}\n")
