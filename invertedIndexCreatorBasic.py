@@ -80,7 +80,7 @@ def calculateTokenScore(frequency, numDocumentsCorpus, numDocumentsTerm):
     @returns - score: float
     '''
     
-    # First, calculating the weighting of the frequency
+    # First, calculating the weighting of the frequencycd des
     tf = 0
 
     if frequency > 0:
@@ -136,13 +136,18 @@ def createInvertedIndex():
         new_index = sorted(index.items())
 
         for key, value in new_index:
-            f.write(f"{key},{len(value)}")
+            
+            # Calculate the idf
+            idf = math.log10(len(pageIDs)/len(value))
+
+            f.write(f"{key},{idf},{len(value)}")
+
             for post in value:
 
                 # Calculating the TF-IDF Score and replacing the word frequency. 
-                score = calculateTokenScore(post.frequency, len(pageIDs), len(value))
+                # score = calculateTokenScore(post.frequency, len(pageIDs), len(value))
             
-                f.write(f",{post.id}:{score}")
+                f.write(f",{post.id}:{post.frequency}")
             f.write("\n")
 
     with open('mappings.txt', 'w', encoding='utf-8') as f:
