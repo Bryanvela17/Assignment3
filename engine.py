@@ -2,7 +2,8 @@
 import re
 from nltk.tokenize import RegexpTokenizer
 from nltk.stem import PorterStemmer
-from main import Posting
+from invertedIndexCreatorBasic import Posting
+import math
 
 
 '''
@@ -18,9 +19,8 @@ class SearchEngine:
         self._invertedIndexFile = invertedIndexFile # The OPEN FILE DESCRIPTOR of the inverted index.
         self._urlMappingsFile = urlMappingsFile # The OPEN FILE DESCRIPTOR of the mapping file.
 
-        self._invertedIndex = self.testLoadInvertedIndex() # Test function - loads the entire inverted index into this dictionary
         self._urlMappings = self.loadUrlMappings() # Loads the url mappings file into a dictionary
-        #self._indexOfIndex = self.loadIndexOfIndex(indexOfIndex)
+        self._indexOfIndex = self.loadIndexOfIndex(indexOfIndex)
 
     def loadUrlMappings(self):
         mappings = dict()
@@ -30,25 +30,6 @@ class SearchEngine:
 
         return mappings
 
-    def testLoadInvertedIndex(self):
-        returnable = dict()
-        for line in self._invertedIndexFile:
-            parsed = line.split(',')
-            token = parsed[0]
-            numDocuments = parsed[1]
-            postings = parsed[2:]
-
-            returnable[token] = []
-
-            for posting in postings:
-
-                # Reconstructing the Posting object
-                docID, frequency = posting.split(':')
-
-                returnable[token].append(Posting(docID, frequency))
-        
-        return returnable
-
     def loadIndexOfIndex(self, indexOfIndex: str):
         '''
         Opens the index of index file specified by parameter, parses the 
@@ -57,7 +38,7 @@ class SearchEngine:
         returnable = dict()
         with open(indexOfIndex, 'r') as f:
             for line in f:
-                entry = line.splitlines()
+                entry = line.split()
                 returnable[entry[0]] = entry[1]
 
         return returnable
@@ -72,42 +53,75 @@ class SearchEngine:
         # Parsing search query, getting the terms as stems
         # Tokens contains a dictionary of the token itself as the key and the position as the value
         tokens = self.parseSearch(query)
-        
-        # List of Posting objects for every token.
-        documentPostings = []
 
-        for token in tokens:
+        # Dictionary to hold IDF information
+        termIDFs = dict()
 
-            # Looking for matches in the inverted index
-            documentPostings.append(self._invertedIndex[token])
-
-        # Getting intersection
-        if documentPostings:
-            pass
-            # Getting the intersection of all Document IDs 
-
-
-            #result = set.intersection(*documentPostings, key=lambda Posting : Posting.id)
-            
-            # Getting the URLs. Returning the list of URLs.
-            #return(self.getUrlMappings(result))
-        
-        '''
-        # Getting all token positions in the inverted index from the index of inverted index
-        indexPositions = self.getIndexPositions(tokens)
-
-        # BOOLEAN RETRIEVAL MODEL
-        # Now, merge all the postings together by getting the intersection - start with the list
-        # with the smallest number of documents first, then go from there.
-        # Getting postings
+        # Dictionary to hold postings information
         postings = dict()
         
+        # Getting the appropriate information from the inverted index by seeking() to the correct position.
+        for token in tokens:
+            self._invertedIndexFile.seek(self._indexOfIndex[token])
+
+            # Getting line
+            information = self._invertedIndexFile.readline().split(',').strip()
+
+            # Getting individual information
+            idfScore = information[1]
+            documentFrequency = information[2]
+            postingList = information[3:]
+
+            # Populating the two dictionaries
+            termIDFs[token] = idfScore
+            
+            # Call Bryan's function on getting the intersection between the posting lists here. Get a dictionary where the term
+            # is the key, and the value is a Posting object with the document ID and the term frequency or that term. 
+
+        # Call cosine similarity function here. You loop through all the documents you found through the intersection.
+
+
+        # Call term position function here
+
+
+        # Call important terms here
+
+
+        # Rank using a heap and return
 
         
-        for token, position in indexPositions.items():
-            self._invertedIndex.seek(position)
-            postings[token] = self.parsePosting(self._invertedIndex.readline())
+    def _getNormalizedQueryValue(self, tokens: dict, idfScores: dict):
         '''
+        Takes a dict of tokens and idfscore dictionary as input. Returns the normalized
+        weighting of the query. 
+        ''' 
+        normalizedSum = 0
+        tokenWeights = dict()
+        for token, frequency in tokens.items():
+            tfwt = 1 + math.log10(frequency)
+
+            weight = tfwt * idfScores[token]
+            tokenWeights[token] = weight
+
+            normalizedSum += weight * weight
+
+        normalizedSum = math.sqrt(normalizedSum) 
+
+        for token, weight in tokenWeights.items():
+            tokenWeights[token] = weight/normalizedSum
+
+        return tokenWeights
+
+      
+
+
+
+    def merge(self, parsedQuery):
+        '''
+        Function that gets the posting lists of all the tokens in parsedQuery dictionary.
+        Returns a list of all of the document Postings that have all words. 
+        '''
+        
 
     def getUrlMappings(self, documentIDs):
         returnable = []
@@ -115,13 +129,6 @@ class SearchEngine:
             returnable.append(self._urlMappings[documentID])
 
         return returnable
-
-    # Experimental function
-    #def getTopFive(self, documentIDs, )
-
-    def parsePosting(self, line):
-
-        return None
 
     def getIndexPositions(self, tokens: list):
         '''
@@ -133,9 +140,7 @@ class SearchEngine:
             positions[token] = self._indexOfIndex[token]
 
         return positions
-
-
-
+    
     def parseSearch(self, query: str):
         '''
         Tokenizes + stems the search query and returns a dictionary of the words
@@ -158,18 +163,15 @@ class SearchEngine:
     
 
 def run():
-    # Open the mappings file
-    with open('mappings.txt', 'r') as mappingsFile:
+    # Open the mappings file, opening the index, parse into a dictionary, and put it into searchengine object
+    with open('mappings.txt', 'r') as mappingsFile, open('results.txt', 'r') as invIndexFile:
+        # CAUTION - This line of code takes a while! Make sure to only perform this initialization ONCE
+        engine = SearchEngine(PorterStemmer(), re.compile('[a-zA-Z0-9]+'), invIndexFile, mappingsFile, 'indexOfIndex.txt')
 
-        # Opening the index, parse into a dictionary, and put it into searchengine object
-        with open('results.txt', 'r') as invIndexFile:
-            # CAUTION - This line of code takes a while! Make sure to only perform this initialization ONCE
-            engine = SearchEngine(PorterStemmer(), re.compile('[a-zA-Z0-9]+'), invIndexFile, mappingsFile)
-
-            while True:
-                # Prompt user for input - user can exit with ctrl C
-                userQuery = input(">>> ")
-                print(engine.getUrls(userQuery))
+        while True:
+            # Prompt user for input - user can exit with ctrl C
+            userQuery = input(">>> ")
+            print(engine.getUrls(userQuery))
 
 
             
