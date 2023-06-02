@@ -22,6 +22,8 @@ class SearchEngine:
         self._urlMappings = self.loadUrlMappings() # Loads the url mappings file into a dictionary
         self._indexOfIndex = self.loadIndexOfIndex(indexOfIndex)
 
+        
+
     def loadUrlMappings(self):
         mappings = dict()
         for line in self._urlMappingsFile:
@@ -84,7 +86,14 @@ class SearchEngine:
         # Call term position function here
 
 
-        # Call important terms here
+        # Call important terms here. Logic here is that the term needs to exist in the actual regular document first before we can see it takes place as a special term. 
+        # So what we do here is we can get the cosine similarities of a certain number of documents, then check to see if they're in a tier 1 index (title), tier 2 
+        # index (header), then tier 3 index (bolded). Add a certain score to these things depending on the % of terms from the query covered, and add 1, 0.5, and 0.25 
+        # respectively. 
+
+
+        
+        # Combine all scores with a weight for each, then rank them using heap
 
 
         # Rank using a heap and return
@@ -112,7 +121,6 @@ class SearchEngine:
 
         return tokenWeights
 
-      
 
 
 
