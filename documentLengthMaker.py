@@ -117,7 +117,7 @@ def createInvertedIndex():
 
     with open('documentLengths.txt', 'w') as f:
         for docID, infoObj in pageIDs.items():
-            f.write(f'{docID},{infoObj.url},{infoObj.length}')
+            f.write(f'{docID},{infoObj.url},{infoObj.length}\n')
 
             
 if __name__ == '__main__':
