@@ -9,7 +9,6 @@ import time
 import heapq
 import numpy as np
 
-
 '''
 Engine will show the top 5 results (no ranking, because boolean) for each result.
 Full results will be output into a text file. 
@@ -17,7 +16,9 @@ Full results will be output into a text file.
 
 
 class SearchEngine:
-    def __init__(self, s, regExp, invertedIndexFile, urlMappingsFile, indexOfIndex=None, lengthOfDoc = None, boldWordsFile = None, boldIndexOfIndex = None, headerWordsFile = None, headerIndexOfIndex = None, titleWordsFile = None, titleIndexOfIndex = None):
+    def __init__(self, s, regExp, invertedIndexFile, urlMappingsFile, indexOfIndex=None, lengthOfDoc=None,
+                 boldWordsFile=None, boldIndexOfIndex=None, headerWordsFile=None, headerIndexOfIndex=None,
+                 titleWordsFile=None, titleIndexOfIndex=None, zoneInvertedIndex = None, zoneIndexOfIndex = None):
         self._stemmer = s  # Stemmer to use
         self._reg = regExp  # Regular expression to use
 
@@ -27,7 +28,7 @@ class SearchEngine:
         self._boldIndexFIle = boldWordsFile
         self._headerIndexFIle = headerWordsFile
         self._titleIndexFIle = titleWordsFile
-
+        self._zoneInvertedIndex = zoneInvertedIndex
 
         self._urlMappings = self.loadUrlMappings()  # Loads the url mappings file into a dictionary
         self._indexOfIndex = self.loadIndexOfIndex(indexOfIndex)
@@ -35,7 +36,7 @@ class SearchEngine:
         self._boldIndex = self.loadBoldIndexOfIndex(boldIndexOfIndex)
         self._headerIndex = self.loadheaderIndexOfIndex(headerIndexOfIndex)
         self._titleIndex = self.loadtitleIndexOfIndex(titleIndexOfIndex)
-
+        self._zoneIndex = self.loadzoneIndexOfIndex(zoneIndexOfIndex)
 
     def loadUrlMappings(self):
         mappings = dict()
@@ -68,6 +69,17 @@ class SearchEngine:
 
         return returnable
 
+    def loadzoneIndexOfIndex(self, indexOfIndex: str):
+        returnable = dict()
+        with open(indexOfIndex, 'r') as f:
+            for line in f:
+                entry = line.strip().split(',')
+                key = entry[0]
+                value = ','.join(entry[1:])  # Reconstruct the value string
+                returnable[key] = value
+
+        return returnable
+
     def loadBoldIndexOfIndex(self, indexOfIndex: str):
         '''
         Opens the index of index file specified by parameter, parses the
@@ -93,7 +105,6 @@ class SearchEngine:
                 returnable[entry[0]] = entry[1]
 
         return returnable
-
 
     def loadtitleIndexOfIndex(self, indexOfIndex: str):
         '''
@@ -143,7 +154,8 @@ class SearchEngine:
         for i in range(1, len(sorted_lists)):
 
             current_list_length = int(sorted_lists[i].split(",")[2].strip())
-            current_list = sorted_lists[i].split(",")[3:]  # Split the current sorted list and exclude the first two elements
+            current_list = sorted_lists[i].split(",")[
+                           3:]  # Split the current sorted list and exclude the first two elements
             second_word = sorted_lists[i].split(",", 1)[0]
             intersection = []  # Temporary list to store the intersection of the current list with the answer list
 
@@ -192,7 +204,8 @@ class SearchEngine:
                     else:
                         p2 += 1
 
-            answer = ['placeholder', str(len(intersection))] + [f"{element}:0" for element in intersection]  # Update the answer list with the intersection  # Update the answer list with the intersection
+            answer = ['placeholder', str(len(intersection))] + [f"{element}:0" for element in
+                                                                intersection]  # Update the answer list with the intersection  # Update the answer list with the intersection
             answer_length = int(answer[1])
             answer = answer[2:]
         N = len(sorted_lists)
@@ -247,7 +260,8 @@ class SearchEngine:
         for i in range(1, len(sorted_lists)):
 
             current_list_length = int(sorted_lists[i].split(",")[2].strip())
-            current_list = sorted_lists[i].split(",")[3:]  # Split the current sorted list and exclude the first two elements
+            current_list = sorted_lists[i].split(",")[
+                           3:]  # Split the current sorted list and exclude the first two elements
             second_word = sorted_lists[i].split(",", 1)[0]
             intersection = []  # Temporary list to store the intersection of the current list with the answer list
 
@@ -297,7 +311,8 @@ class SearchEngine:
                         p2 += 1
 
             intersection_length = len(intersection)
-            answer = ['placeholder', str(intersection_length)] + [f"{element}:0" for element in intersection]  # Update the answer list with the intersection
+            answer = ['placeholder', str(intersection_length)] + [f"{element}:0" for element in
+                                                                  intersection]  # Update the answer list with the intersection
             answer_length = intersection_length
             answer = answer[2:]
 
@@ -319,9 +334,6 @@ class SearchEngine:
         # Dictionary to hold IDF information
         termIDFs = dict()
 
-        # Dictionary to hold postings information
-        postings = dict()
-
         postingList = []
 
         # Getting the appropriate information from the inverted index by seeking() to the correct position.
@@ -331,16 +343,14 @@ class SearchEngine:
 
             # Getting line
             information = self._invertedIndexFile.readline().strip()
+            splitInformation = information.split(',')
 
             # Getting individual information
-            idfScore = information.split(',')[1]
+            idfScore = splitInformation[1]
             termIDFs[token] = float(idfScore)
-            documentFrequency = information.split(',')[2]
-            # termIDFs[token] = [idfScore, documentFrequency]
+            documentFrequency = splitInformation[2]
+            termPostingList = splitInformation[3:]
             postingList.append(information)
-
-            # Populating the two dictionaries
-            # termIDFs[token] = idfScore
 
         results, intersectionlength = self.intersect(postingList)
         max_length = 0
@@ -357,36 +367,74 @@ class SearchEngine:
                     max_value = value
                     break
 
-        # print(max_value)
-        # print(5)
         queryTokens = dict()
         for token in tokens:
             queryTokens[token] = len(tokens[token])
-        # print(queryTokens)
 
-        sortedScores = []
-        cosineScore = self.fastCosineScore(queryTokens, termIDFs, results)
-        cosineScore = self.weighImportantTermsVersion1(cosineScore)
+        # Dictionary to hold documents TFIDF information
+        documentTFIDFs = dict()
 
-        for key, value in cosineScore.items():
-            sortedScores.append((value * -1, key))
-        # sortedScores = [(k, v) for k, v in cosineScore.items()]
-        heapq.heapify(sortedScores)
+        cosineScore = self.fastCosineScore(queryTokens, termIDFs, results, documentTFIDFs)
+        cosineScore = self.weighImportantTermsVersion1(cosineScore, queryTokens)
+        # Weighting TF-IDF Scores
+        # Dictionary that holds the total tfidf score for
+        finalDocumentTFIDFScores = self.getDocumentTotalTFIDFScore(documentTFIDFs)
 
-        print(sortedScores)
-        print(cosineScore)
-            # Call Bryan's function on getting the intersection between the posting lists here. Get a dictionary where the term
-            # is the key, and the value is a Posting object with the document ID and the term frequency or that term.
+        # Combining all scores
+        combinedScores = []
+        for docID in cosineScore:
+            combinedScores.append((-1 * (1 * cosineScore[docID] + 1 * finalDocumentTFIDFScores[docID]), docID))
 
-        # Call cosine similarity function here. You loop through all the documents you found through the intersection.
+        heapq.heapify(combinedScores)
 
-        # Call term position function here
+        self.printURLs(combinedScores)
 
-        # Call important terms here
+    def printURLs(self, scoreList: list):
+        '''
+        Takes a list of tuples and returns the URLs.
+        '''
+        numURLs = 0
+        for tup in scoreList:
+            if numURLs == 10:
+                break
+            url = self._urlMappings[str(tup[1])]
+            if not any(ext in url for ext in [".txt", ".jpg", ".png", ".ff"]) and not url.endswith(
+                    ".txt") and "txt" not in url:
+                print(f"{numURLs + 1}: {url}")
+                numURLs += 1
 
-        # Rank using a heap and return
+    def getDocumentTotalTFIDFScore(self, documentTFIDFs):
+        documentTFIDFScores = dict()
+        documentTFIDFNormalizeWeights = dict()
+        for term, postingInfo in documentTFIDFs.items():
+            for tup in postingInfo:
+                docID = tup[0]
+                tfidfScore = tup[1]
 
-    def fastCosineScore(self, tokens, termIDFs, results):
+                if docID not in documentTFIDFScores:
+                    documentTFIDFScores[docID] = tfidfScore
+                else:
+                    documentTFIDFScores[docID] += tfidfScore
+                    # documentTFIDFNormalizeWeights[docID] += tfidfScore * tfidfScore
+
+        # for documentID, score in documentTFIDFScores.items():
+        # documentTFIDFScores[documentID] = score / math.sqrt(documentTFIDFNormalizeWeights[documentID])
+
+        # Getting min and max to normalize
+        max = -1000
+        min = 1000
+        for docID, score in documentTFIDFScores.items():
+            if score > max:
+                max = score
+            if score < min:
+                min = score
+
+        for docID, score in documentTFIDFScores.items():
+            documentTFIDFScores[docID] = (score - min) / (max - min)
+
+        return documentTFIDFScores
+
+    def fastCosineScore(self, tokens, termIDFs, results, documentTFIDFs):
         scores = [0] * 55392
         docIDs = set()
 
@@ -402,59 +450,78 @@ class SearchEngine:
                 freq = 1 + math.log10(freq)
                 scores[docID] += freq * normalizedValue[term]
 
+                # Appending TFIDF information to the document itself
+                if term not in documentTFIDFs:
+                    documentTFIDFs[term] = []
+                    documentTFIDFs[term].append((docID, freq * termIDFs[term]))
+                else:
+                    documentTFIDFs[term].append((docID, freq * termIDFs[term]))
+
         cosineSimScore = dict()
         for docID in docIDs:
-            # print(scores[docID])
-            # print(float(self._docLengths[str(docID)][1]))
-            cosineSimScore[docID] = scores[docID] / float(self._docLengths[str(docID)][1])
+            docID_str = str(docID)
+            docLength = self._docLengths.get(docID_str)
+            if docLength is not None:
+                docLength_value = docLength[1]
+                # Perform any necessary string manipulation on docLength_value
+                try:
+                    cosineSimScore[docID] = scores[docID] / float(docLength_value)
+                except ValueError:
+                    # Handle the case where the value cannot be converted to float
+                    continue
+            else:
+                continue
 
         return cosineSimScore
 
+    def weighImportantTermsVersion1(self, cosineSimScore, tokens):
+        #
+        # for terms in tokens:
+        #     if terms in self._boldIndex:
+        #         positionB = (self._zoneIndex[terms])
+        #         positionB = positionB.strip().split(',')
+        #         # self._zoneInvertedIndex.seek(positionB)
+        #
+        #         informationB = self._zoneInvertedIndex.readline().strip().split(',')
+        #         for key in cosineSimScore:
+        #             if str(key) in informationB:
+        #                 # Extract the URL from the informationB string
+        #                 url_parts = [part.split(':') for part in informationB]
+        #                 urls = [part[1] for part in url_parts]
+        #                 for url in urls:
+        #                     if url == key:  # Check if the URL matches the key
+        #                         cosineSimScore[key] += cosineSimScore[key] * 0.25
 
-    def weighImportantTermsVersion1(self, cosineSimScore):
-        for key, value in cosineSimScore.items():
-            constValue = value
-            if key in self._boldIndex:
-                constValue += constValue * 0.20
-            if key in self._headerIndex:
-                constValue += constValue * 0.40
-            if key in self._titleIndex:
-                constValue += constValue * 0.65
-            cosineSimScore[key] = constValue
+        for term in tokens:
+            if len(term) > 2:
+                if term in self._boldIndex:
+                    positionB = int(self._boldIndex[term])
+                    self._boldIndexFIle.seek(positionB)
+                    informationB = self._boldIndexFIle.readline().strip().split(',')
+                    for key in cosineSimScore:
+                        if str(key) in informationB:
+                            cosineSimScore[key] += cosineSimScore[key] * 0.25
+        #
+        #     if len(term) > 2:
+        #         if term in self._headerIndex:
+        #             positionH = int(self._headerIndex[term])
+        #             self._headerIndexFIle.seek(positionH)
+        #             informationH = self._headerIndexFIle.readline().strip().split(',')
+        #             for key in cosineSimScore:
+        #                 if str(key) in informationH:
+        #                     cosineSimScore[key] += cosineSimScore[key] * 0.40
+
+            if len(term) > 2:
+                if term in self._titleIndex:
+                    positionT = int(self._titleIndex[term])
+                    self._titleIndexFIle.seek(positionT)
+                    informationT = self._titleIndexFIle.readline().strip().split(',')
+                    for key in cosineSimScore:
+                        if str(key) in informationT:
+                            cosineSimScore[key] += cosineSimScore[key] * .85
 
         return cosineSimScore
 
-
-    def weighImportantTermsVersion2(self, cosineSimScore):
-        for key, value in cosineSimScore.items():
-            constValue = value
-            positionBold = 0
-            try:
-                positionBold = int(self._boldIndex[key])
-            except TypeError:
-                positionBold = -1
-            if positionBold != -1:
-                constValue += constValue * 0.20
-
-            positionHeader = 0
-            try:
-                positionHeader = int(self._headerIndex[key])
-            except TypeError:
-                positionHeader = -1
-            if positionHeader != -1:
-                constValue += constValue * 0.40
-
-            positionTitle = 0
-            try:
-                positionTitle = int(self._titleIndex[key])
-            except TypeError:
-                positionTitle = -1
-            if positionTitle != -1:
-                constValue += constValue * 0.65
-
-            # Update the modified value in the dictionary
-            cosineSimScore[key] = constValue
-        return cosineSimScore
 
         # topK = dict()
         # weight_of_words = dict()
@@ -499,7 +566,6 @@ class SearchEngine:
         #                 break
         #         # print(1111)
 
-
     def calculateNorm(self, term, weight_of_words):
         norm_sum = 0
 
@@ -528,7 +594,6 @@ class SearchEngine:
             tfwt = 0
             if frequency > 0:
                 tfwt = 1 + math.log10(frequency)
-
 
             weight = tfwt * idfScores[token]
             tokenWeights[token] = weight
@@ -589,9 +654,20 @@ class SearchEngine:
 
 def run():
     # Open the mappings file, opening the index, parse into a dictionary, and put it into searchengine object
-    with open('FinalDocumentss/mapping.txt', 'r') as mappingsFile, open('FinalDocumentss/invertedIndexFinalWithSkips.txt', 'r') as invIndexFile, open('FinalDocumentss/documentLengths.txt', 'r') as lengthOfDocs, open('FinalDocumentss/boldWords.txt') as boldWordsFile, open ('FinalDocumentss/headerWords.txt') as headerWordsFile, open('FinalDocumentss/titleWords.txt') as titleWordsFile:
+    with open('FinalDocumentss/mapping.txt', 'r') as mappingsFile, open('FinalDocumentss/invertedIndexFinalWithSkips.txt',
+                                                                       'r') as invIndexFile, open(
+            'FinalDocumentss/documentLengths.txt', 'r') as lengthOfDocs, open(
+            'FinalDocumentss/boldWords.txt') as boldWordsFile, open(
+            'FinalDocumentss/headerWords.txt') as headerWordsFile, open(
+            'FinalDocumentss/titleWords.txt') as titleWordsFile, open(
+            'FinalDocumentss/zoneInvertedIndex.txt') as zoneInvertedIndex:
+
         # CAUTION - This line of code takes a while! Make sure to only perform this initialization ONCE
-        engine = SearchEngine(PorterStemmer(), re.compile('[a-zA-Z0-9]+'), invIndexFile, mappingsFile, 'FinalDocumentss/index_Of_The_Index_Final.txt', lengthOfDocs, boldWordsFile, 'FinalDocumentss/bold_words_Index_of_Index.txt' , headerWordsFile, 'FinalDocumentss/header_words_Index_of_Index.txt', titleWordsFile, 'FinalDocumentss/title_words_Index_of_Index.txt')
+        engine = SearchEngine(PorterStemmer(), re.compile('[a-zA-Z0-9]+'), invIndexFile, mappingsFile,
+                              'FinalDocumentss/index_Of_The_Index_Final.txt', lengthOfDocs, boldWordsFile,
+                              'FinalDocumentss/bold_words_Index_of_Index.txt', headerWordsFile,
+                              'FinalDocumentss/header_words_Index_of_Index.txt', titleWordsFile,
+                              'FinalDocumentss/title_words_Index_of_Index.txt', zoneInvertedIndex, 'FinalDocumentss/zoneIndexOfIndex.txt')
 
         while True:
             # Prompt user for input - user can exit with ctrl C
