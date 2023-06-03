@@ -98,28 +98,9 @@ def calculateTokenScore(frequency, numDocumentsCorpus, numDocumentsTerm):
     idf = math.log10(numDocumentsCorpus/numDocumentsTerm)
     return tf * idf
 
-# def dumpIndex(index, counter):
-#     if counter == 1:
-#         filename = 'firstDump.txt'
-#     elif counter == 2:
-#         filename = 'secondDump.txt'
-#     elif counter == 3:
-#         filename = 'thirdDump.txt'
-#     else:
-#         return  # Invalid counter value
 
-#     with open(filename, 'w', encoding='utf-8') as file:
-#         for word, postings in index.items():
-#             file.write(f"{word},{len(postings)}")
-#             for post in postings:
-#                 score = calculateTokenScore(post.frequency, len(pageIDs), len(postings))
-#                 file.write(f",{post.id}:{score}")
-#             file.write("\n")
 
-# def mergeFiles(file1, file2, outputFilePath, totalDocs):
-#     with open(file1, 'r') as firstFile, open(file2, 'r') as secondFile, open(outputFilePath, 'w+') as outputFile: #opens all txt at once
-
-def mergeFiles(file1, file2, outputFilePath, totalDocs):
+def mergeFiles(file1, file2, outputFilePath):
     with open(file1, 'r') as firstFile, open(file2, 'r') as secondFile, open(outputFilePath, 'w+') as outputFile:
         line1 = firstFile.readline().strip()
         line2 = secondFile.readline().strip()
@@ -130,9 +111,10 @@ def mergeFiles(file1, file2, outputFilePath, totalDocs):
 
             if tokens1[0] == tokens2[0]:
                 # Merge the lines with matching tokens
-                newDocFreq = int(tokens1[1]) + int(tokens2[1])
-                newDocFreq = str(newDocFreq)
-                outputFile.write(tokens1[0] + "," + newDocFreq + "," + ",".join(tokens1[2:]) + ",".join(tokens2[2:]) + '\n')
+                # newDocFreq = int(tokens1[1]) + int(tokens2[1])
+                # newDocFreq = str(newDocFreq)
+                #outputFile.write(tokens1[0] + "," + newDocFreq + "," + ",".join(tokens1[2:]) + ",".join(tokens2[2:]) + '\n')
+                outputFile.write(tokens1[0] + "," + tokens1[1] + "," + ",".join(tokens1[2:]) + "," + ",".join(tokens2[2:]) + '\n')
                 line1 = firstFile.readline().strip()  # increment the pointer in file1 down
                 line2 = secondFile.readline().strip()  # increment the pointer in file2 down
             elif tokens1[0] < tokens2[0]:  # tokens1 line is the smallest
@@ -152,240 +134,26 @@ def mergeFiles(file1, file2, outputFilePath, totalDocs):
             outputFile.write(line2 + '\n')
             line2 = secondFile.readline().strip()
 
-    with open(outputFilePath, 'r') as inputFile, open("finalMerged.txt", 'w') as sortedFile:
+
+
+
+
+def idfToTxt(fileName, completeFile, totalDocs):
+    with open(fileName, 'r') as inputFile, open(completeFile, 'w') as complete:
         for line in inputFile:
             tokens = line.strip().split(',')
             if len(tokens) >= 3:
-                numberOfDocs = int(tokens[1])
+                numberOfDocs = len(tokens) - 3 #gets how many posting objects there are 
                 idf = math.log10(totalDocs / numberOfDocs)
                 subArray = tokens[2:]
                 subArray = [x for x in subArray if x]  # Filter out empty elements
                 subArray = sorted(subArray, key=lambda x: int(x.split(':')[0]))
-                sorted_line = tokens[0] + ',' + str(idf) + ',' + tokens[1] + ','
+                sorted_line = tokens[0] + ',' + str(idf) + ',' + str(numberOfDocs) + ','
                 sorted_line += ','.join(subArray)
-                sortedFile.write(sorted_line + '\n')
+                complete.write(sorted_line + '\n')
             else:
                 # Write the original line to the output file
-                sortedFile.write(line)
-
-    print("Total doc freq: " + str(totalDocs))
-
-
-
-# def mergeFiles(file1, file2, file3, outputFilePath, totalDocs):
-#     with open(file1, 'r') as firstFile, open(file2, 'r') as secondFile, open(file3, 'r') as thirdFile, open(outputFilePath, 'w+') as outputFile: #opens all txt at once
-#         line1 = firstFile.readline().strip()
-#         line2 = secondFile.readline().strip()
-#         line3 = thirdFile.readline().strip()
-
-#         while line1 and line2 and line3:
-#             tokens1 = line1.split(',') #token,docFreq, docID:freq
-#             tokens2 = line2.split(',') 
-#             tokens3 = line3.split(',')
-
-#             if tokens1[0] == tokens2[0] and tokens2[0] == tokens3[0]:
-#                 # Merge the lines with matching tokens
-#                 newDocFreq = int(tokens1[1]) + int(tokens2[1]) + int(tokens3[1])
-#                 newDocFreq = str(newDocFreq)
-#                 outputFile.write(tokens1[0] + "," + newDocFreq + "," + ",".join(tokens1[2:]) + ",".join(tokens2[2:]) + ",".join(tokens3[2:]) + '\n')
-#                 line1 = firstFile.readline().strip()  # increment the pointer in file1 down
-#                 line2 = secondFile.readline().strip()  # increment the pointer in file2 down
-#                 line3 = thirdFile.readline().strip()  # increment the pointer in file3 down
-#             elif tokens1[0] < tokens2[0] and tokens1[0] < tokens3[0]:  # tokens1 line is the smallest
-#                 outputFile.write(line1 + '\n')
-#                 line1 = firstFile.readline().strip()  # increment the pointer in file1 down
-#             elif tokens2[0] < tokens1[0] and tokens2[0] < tokens3[0]:  # tokens2 line is the smallest
-#                 outputFile.write(line2 + '\n')
-#                 line2 = secondFile.readline().strip()  # increment the pointer in file2 down
-#             elif tokens3[0] < tokens1[0] and tokens3[0] < tokens2[0]:  # tokens3 line is the smallest
-#                 outputFile.write(line3 + '\n')
-#                 line3 = thirdFile.readline().strip()  # increment the pointer in file3 down
-#             elif tokens1[0] == tokens2[0] and tokens1 != tokens3[0]:
-#                 # Merge lines from file1 and file2
-#                 newDocFreq = int(tokens1[1]) + int(tokens2[1])
-#                 newDocFreq = str(newDocFreq)
-#                 outputFile.write(tokens1[0] + "," + newDocFreq + "," + ",".join(tokens1[2:]) + ",".join(tokens2[2:]) + '\n')
-#                 line1 = firstFile.readline().strip()  # increment the pointer in file1 down
-#                 line2 = secondFile.readline().strip()  # increment the pointer in file2 down
-#             elif tokens1[0] == tokens3[0] and tokens1[0] != tokens2[0]:
-#                 # Merge lines from file1 and file3
-#                 newDocFreq = int(tokens1[1]) + int(tokens3[1])
-#                 newDocFreq = str(newDocFreq)
-#                 outputFile.write(tokens1[0] + "," + newDocFreq + "," + ",".join(tokens1[2:]) + ",".join(tokens3[2:]) + '\n')
-#                 line1 = firstFile.readline().strip()  # increment the pointer in file1 down
-#                 line3 = thirdFile.readline().strip()  # increment the pointer in file3 down
-#             elif tokens2[0] == tokens3[0] and tokens2[0] != tokens1[0]:
-#                 # Merge lines from file2 and file3
-#                 newDocFreq = int(tokens2[1]) + int(tokens3[1])
-#                 newDocFreq = str(newDocFreq)
-#                 outputFile.write(tokens2[0] + "," + newDocFreq + "," + ",".join(tokens2[2:]) + ",".join(tokens3[2:]) + '\n')
-#                 line2 = secondFile.readline().strip()  # increment the pointer in file2 down
-#                 line3 = thirdFile.readline().strip()  # increment the pointer in file3 down
-
-#         if line1 == '' and line2 != '' and line3 != '': #merge for just file2 and 3 
-#             while line2 and line3:
-#                 tokens2 = line2.split(',') 
-#                 tokens3 = line3.split(',')
-#                 if tokens2[0] < tokens3[0]:
-#                     outputFile.write(tokens2[0] + "," + tokens2[1] + ",".join(tokens2[2:]) + '\n')
-#                     line2 = secondFile.readline().strip()  # increment the pointer in file2 down
-#                 elif tokens3[0] < tokens2[0]:
-#                     outputFile.write(tokens3[0] + "," + tokens3[1] + ",".join(tokens3[2:]))
-#                     line3 = thirdFile.readline().strip()  # increment the pointer in file2 down
-#                 else: #2 and 3 are equal
-#                     newDocFreq = int(tokens2[1]) + int(tokens3[1]) 
-#                     newDocFreq = str(newDocFreq)
-#                     outputFile.write(tokens2[0] + "," + newDocFreq + "," + ",".join(tokens2[2:]) + ",".join(tokens3[2:]) + '\n')
-#                     line2 = secondFile.readline().strip()  # increment the pointer in file2 down
-#                     line3 = thirdFile.readline().strip()  # increment the pointer in file3 down
-#             if line2 == '' and line3 != '':
-#                 while line3: #put the left over into the output file 
-#                     outputFile.write(line3 + '\n')
-#                     line3 = thirdFile.readline().strip()
-#         elif line2 == '' and line1 != '' and line3 != '':
-#             while line1 and line3:
-#                 tokens1 = line1.split(',')
-#                 tokens3 = line3.split(',')
-#                 if tokens1[0] < tokens3[0]:
-#                     outputFile.write(tokens1[0] + "," + tokens1[1] + ",".join(tokens1[2:]) + '\n')
-#                     line1 = firstFile.readline().strip()  # increment the pointer in file1 down
-#                 elif tokens3[0] < tokens1[0]:
-#                     outputFile.write(tokens3[0] + "," + tokens3[1] + ",".join(tokens3[2:]) + '\n')
-#                     line3 = thirdFile.readline().strip()  # increment the pointer in file3 down
-#                 else:  # 1 and 3 are equal
-#                     newDocFreq = int(tokens1[1]) + int(tokens3[1])
-#                     newDocFreq = str(newDocFreq)
-#                     outputFile.write(tokens1[0] + "," + newDocFreq + "," + ",".join(tokens1[2:]) + ",".join(tokens3[2:]) + '\n')
-#                     line1 = firstFile.readline().strip()  # increment the pointer in file1 down
-#                     line3 = thirdFile.readline().strip()  # increment the pointer in file3 down
-#             if line1 == '' and line3 != '':
-#                 while line3:  # put the left over into the output file
-#                     outputFile.write(line3 + '\n')
-#                     line3 = thirdFile.readline().strip()
-#         elif line3 == '' and line1 != '' and line2 != '':
-#             while line1 and line2:
-#                 tokens1 = line1.split(',')
-#                 tokens2 = line2.split(',')
-#                 if tokens1[0] < tokens2[0]:
-#                     outputFile.write(tokens1[0] + "," + tokens1[1] + ",".join(tokens1[2:]) + '\n')
-#                     line1 = firstFile.readline().strip()  # increment the pointer in file1 down
-#                 elif tokens2[0] < tokens1[0]:
-#                     outputFile.write(tokens2[0] + "," + tokens2[1] + ",".join(tokens2[2:]) + '\n')
-#                     line2 = secondFile.readline().strip()  # increment the pointer in file2 down
-#                 else:  # 1 and 2 are equal
-#                     newDocFreq = int(tokens1[1]) + int(tokens2[1])
-#                     newDocFreq = str(newDocFreq)
-#                     outputFile.write(tokens1[0] + "," + newDocFreq + "," + ",".join(tokens1[2:]) + ",".join(tokens2[2:]) + '\n')
-#                     line1 = firstFile.readline().strip()  # increment the pointer in file1 down
-#                     line2 = secondFile.readline().strip()  # increment the pointer in file2 down
-#             if line1 == '' and line2 != '':
-#                 while line2:  # put the left over into the output file
-#                     outputFile.write(line2 + '\n')
-#                     line2 = secondFile.readline().strip()
-#         elif line1 != '' and line2 == '' and line3 == '':
-#             while line1:  # put the left over into the output file
-#                 outputFile.write(line1 + '\n')
-#                 line1 = firstFile.readline().strip()
-#         elif line1 == '' and line2 != '' and line3 == '':
-#             while line2:  # put the left over into the output file
-#                 outputFile.write(line2 + '\n')
-#                 line2 = secondFile.readline().strip()
-#         elif line1 == '' and line2 == '' and line3 != '':
-#             while line3:  # put the left over into the output file
-#                 outputFile.write(line3 + '\n')
-#                 line3 = thirdFile.readline().strip()
-
-
-#         with open("merged.txt", 'r') as inputFile, open("finalMerged.txt", 'w') as sortedFile:
-#             for line in inputFile:
-#                 tokens = line.strip().split(',')
-#                 if len(tokens) >= 3:
-#                     numberOfDocs = int(tokens[1])
-#                     idf = math.log10(totalDocs/numberOfDocs)
-#                     subArray = tokens[2:]
-#                     subArray = [x for x in subArray if x]  # Filter out empty elements
-#                     subArray = sorted(subArray, key=lambda x: int(x.split(':')[0]))
-#                     sorted_line = tokens[0] + ',' + str(idf) + ',' + tokens[1] + ','
-#                     sorted_line += ','.join(subArray)
-#                     #sorted_line = ','.join(tokens[:2] + subArray)
-#                     sortedFile.write(sorted_line + '\n')
-#                 else:
-#                     # Write the original line to the output file
-#                     sortedFile.write(line)
-
-#         print("total doc frq " + str(totalDocs))
-
-
-        # outputFile.seek(0) #reset to the top of the output file
-        # #sort all the posting lists from least to greatest 
-        # for lines in outputFile:
-        #     print("hello")
-        #     # Split the line into tokens
-        #     tokens = lines.strip().split(',')
-
-        #     if len(tokens) >= 3:  # Check if there are enough elements in the token
-        #         # Sort the tokens from index 2 onward based on the value after the second comma
-        #         print(tokens)
-        #         subArray = tokens[2:]
-        #         subArray = [x for x in subArray if x]  # Filter out empty elements
-        #         subArray = sorted(subArray, key=lambda x: int(x.split(':')[0]))
-        #         sorted_line = ', '.join(tokens[:2] + subArray)
-
-        #         # Write the sorted line to the output file
-        #         outputFile.write(sorted_line + '\n')
-        #     else:
-        #         # Write the original line to the output file
-        #         outputFile.write(lines)
-            
-
-
-   
-
-
-
-
-
-    # with open(outputFilePath, "w+") as outputFile:
-    #     for file in filePath:
-    #         with open(file, "r") as inputFile:
-    #             for line in inputFile:  # Goes line by line checking if the current token exists in the merged txt
-    #                 tokens = line.strip().split()
-    #                 tokenLineNumber = findTokenTXT(outputFile, tokens[0])
-    #                 if tokenLineNumber != -1:  # If the token exists in merge, append the posting list to the corresponding token
-    #                     lineCounter = 0
-    #                     outputFile.seek(0)  # Move the file pointer back to the beginning of the file
-    #                     for outputLine in outputFile:
-    #                         if tokenLineNumber == lineCounter:  # On the correct line to append
-    #                             outputLine = outputLine.rstrip()  # Remove trailing newline
-    #                             outputToken = outputLine.strip().split()
-    #                             totalDocFrequency = int(tokens[1]) + int(outputToken[1]) #change the total doc frequency for the line
-    #                             totalDocFrequency = str(totalDocFrequency)
-    #                             newOutputString = outputToken[0] + ',' + totalDocFrequency #token + docFreq
-    #                             outputList = ",".join(tokens[2:])
-    #                             newOutputString += outputList #puts the posting list to token,docFreq 
-    #                             inputList = ",".join(tokens[2:])  # Get the posting list from the input
-    #                             newOutputString = newOutputString + inputList
-    #                             outputFile.write(newOutputString + "\n")  # Write the line to the output file
-    #                         lineCounter += 1
-    #                 else:
-    #                     outputFile.write(line + "\n")
-
-                
-
-
-def findTokenTXT(file, token):
-    with open(file, 'r') as f:
-        lines = f.readlines()
-
-    line_number = -1
-    for i, line in enumerate(lines, start=1):
-        if token in line:
-            line_number = i
-            break
-    return line_number #if it returns -1 the token is not in the file
-
-
-
+                complete.write(line)
 
 
 def dump(index, dumpCounter):
@@ -424,49 +192,9 @@ def createInvertedIndex():
 
         for filename in os.listdir(os.path.join(path_to_inner, folder)):
             json_files.append(os.path.join(path_to_inner, folder, filename))
-            
+
         for json_file in json_files:
-            # Processing each json file
-            # if len(index) < 364376 and dumpCounter <= 3:
-            #     words, url = parseFile(json_file)
-                
-            #     for word, counter in words.items():  
-            #         # Creating a posting
-            #         post = Posting(pageCounter, counter)
-            #         # Assigning to dictionary
-            #         if word in index:
-            #             index[word].append(post)
-                        
-            #             # posting_strings = [f"{posting.id}:{posting.frequency}" for posting in index[word]] #get rid of this after
-            #             # line = word + " " + " ".join(posting_strings)
-            #             # file.write(line + "\n")                            
-            #         else:
-            #             index[word] = []
-            #             index[word].append(post)     
-            # #dump if over threshold
-            # elif len(index) >= 364376 and dumpCounter <= 3: #keeps dumping until dumpCounter > 3 
-            #     dump(index,dumpCounter) #change this back
-            #     index = {} #change this back
-            #     dumpCounter +=1
-            # elif dumpCounter == 4: #dump counter >=3 
-            #     # dump(index,3) #change this back
-            #     # index = {} #change this back
-            #     words, url = parseFile(json_file)
-                
-            #     for word, counter in words.items():  
-            #         # Creating a posting
-            #         post = Posting(pageCounter, counter)
-            #         # Assigning to dictionary
-            #         if word in index:
-            #             index[word].append(post)
-                        
-            #             # posting_strings = [f"{posting.id}:{posting.frequency}" for posting in index[word]] #get rid of this after
-            #             # line = word + " " + " ".join(posting_strings)
-            #             # file.write(line + "\n")                            
-            #         else:
-            #             index[word] = []
-            #             index[word].append(post) 
-            if dumpCounter <= 3:
+            if len(index) < 363644:
                 words, url = parseFile(json_file)
                 for word, counter in words.items():
                     post = Posting(pageCounter, counter)
@@ -477,105 +205,27 @@ def createInvertedIndex():
             pageIDs[pageCounter] = url
             pageCounter += 1
 
-            if len(index) >= 364376:
+            if len(index) >= 363644 and dumpCounter <= 3:
                 dump(index, dumpCounter)
                 index = {}
-                dumpCounter += 1 
+                dumpCounter += 1    
             
-            # pageIDs[pageCounter] = url
-            # pageCounter += 1
-        
         if(len(index) > 0):
-            dump(index,3)
-
+            dump(index,4) #dump into leftover
+ 
 
     #merge first and second
-    mergeFiles("firstDump.txt", "secondDump.txt", "merged.txt", len(pageIDs))
+    mergeFiles("firstDump.txt", "secondDump.txt", "merged.txt")
     #merge merged and third into finalMerged
-    mergeFiles("thirdDump.txt", "merged.txt", "finalMerged.txt", len(pageIDs))
+    mergeFiles("thirdDump.txt", "fourthDump.txt", "secondMerged.txt")
+    mergeFiles("merged.txt", "secondMerged.txt", "finalMerged.txt")
+   # mergeFiles("thirdDump.txt", "merged.txt", "finalMerged.txt")
+    idfToTxt("finalMerged.txt", "completeMerge.txt", len(pageIDs))
 
-
-#get rid of this later 
-    # with open('invertedIndex.txt', 'w', encoding='utf-8') as f:
-    #     new_index = sorted(index.items())
-
-    #     for key, value in new_index:
-
-    #         # Calculate the idf
-    #         idf = math.log10(len(pageIDs) / len(value))
-
-    #         f.write(f"{key},{idf},{len(value)}")
-
-    #         for post in value:
-    #             # Calculating the TF-IDF Score and replacing the word frequency.
-    #             # score = calculateTokenScore(post.frequency, len(pageIDs), len(value))
-
-    #             f.write(f",{post.id}:{post.frequency}")
-    #         f.write("\n")
-
-
-        #calculate the size of the current inverted index
-        # indexSize = sys.getsizeof(index)
-        # print(indexSize)
-        #if indexSize >= 70 then dump
-        #1,093,129/3 = 364,376.33333
-        # if len(index) >= 364376 and dumpCounter != 3:
-        #     if dumpCounter == 1:
-        #         print("first")
-        #         filename = 'firstDump.txt'
-        #     elif dumpCounter == 2:
-        #         print("second")
-        #         filename = 'secondDump.txt'
-
-        #     #get the score of the current partial index and put it into the correct dump txt
-        #     with open(filename, 'w', encoding='utf-8') as file:
-        #         for word, postings in index.items():
-        #             file.write(f"{word, len(postings)},") #token, numberOfDocuments, docID:frequency 
-        #             for post in postings:
-        #                 file.write(f"{post.id}:{post.frequency},")
-        #             file.write("\n")
-        #     #dumpIndex(index, dumpCounter)
-        #     index = {}
-        #     dumpCounter+=1
-        # elif dumpCounter == 3: #if the dumpCounter is 3 just get the rest of the index and put it into the third txt
-        #     print("third")
-        #     filename = 'thirdDump.txt'
-        #     #get the score of the current partial index and put it into the correct dump txt
-        #     with open(filename, 'w', encoding='utf-8') as file:
-        #         print("hello")
-        #         for word, postings in index.items():
-        #             file.write(f"{word, len(postings)},") #token, numberOfDocuments, docID:frequency 
-        #             for post in postings:
-        #                 file.write(f"{post.id}:{post.frequency},")
-        #             file.write("\n")
-        #     #dumpIndex(index, dumpCounter)
-        #     index = {}
-
-
-            #if the remaining isnt >= 70 then just dump the rest into the third file
-            # if index:
-            #     with open(filename, 'w', encoding='utf-8') as file:
-            #         for word, postings in index.items():
-            #             file.write(f"{word, len(pageIDs)},") #token, docID:frequency 
-            #             for post in postings:
-            #                 file.write(f",{post.id}:{post.frequency}")
-            #             file.write("\n")
-            #     index = {}
-
-
-            # After processing, store a mapping between the actual file and the id
-            
-
-            #merge the files 
     
-
-
         
             
-    if findTokenTXT("firstDump.txt", "for"):
-        print("true")
-    else:
-        print("false")
+    
     # # Once finished, put output to file
     # with open('results.txt', 'w', encoding='utf-8') as f:
     #     new_index = sorted(index.items())
